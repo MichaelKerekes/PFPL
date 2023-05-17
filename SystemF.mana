@@ -1,0 +1,60 @@
+------------------------------------------------------------------------------
+--  System F
+------------------------------------------------------------------------------
+
+import Core
+
+------------------------------------------------------------------------------
+--  inductive types in system F
+------------------------------------------------------------------------------
+
+Mu : (Type -> Type) -> Type
+Mu f = (a : Type) -> (f a -> a) -> a
+
+foldMu : (f a -> a) -> Mu f -> a
+foldMu faa muf = muf a faa
+
+inMu : Functor f => f (Mu f) -> Mu f
+inMu fmuf a faa = faa (map (foldMu faa) fmuf)
+
+--inMu fmuf a faa = faa fa
+--  where
+--    g  = foldMu faa : Mu f -> a
+--    h  = map g     : f (Mu f) -> f a
+--    fa = h fmuf    : f a
+
+------------------------------------------------------------------------------
+--  type Lst v = Nl | Cns v (Lst v)
+------------------------------------------------------------------------------
+
+type ListF v a = NlF | CnsF v a
+
+instance Functor (ListF v) where
+  map f (NlF     ) = NlF
+  map f (CnsF v a) = CnsF v (f a)
+
+Lst : Type -> Type
+Lst v = Mu (ListF v)
+
+Nl : Lst a
+Nl = inMu NlF
+
+Cns : v -> Lst v -> Lst v
+Cns x xs = inMu (CnsF x xs)
+
+fromLst : Lst a -> List a
+fromLst la = la (List a) go
+  where
+    go : ListF a (List a) -> List a
+    go (NlF      ) = Nil
+    go (CnsF x xs) = Cons x xs
+
+_ = Reflexive : fromLst (Cns 'a' <| Cns 'b' <| Cns 'c' Nl) = [ 'a', 'b', 'c' ]
+
+------------------------------------------------------------------------------
+--  type Mu t = Mu (Mu t -> t)
+------------------------------------------------------------------------------
+
+-- MuF isn't a functor so it does't generate an inductive type
+
+type MuF t a = MuF (a -> t)
